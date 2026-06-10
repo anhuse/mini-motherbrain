@@ -13,13 +13,20 @@ class BrregAdapter(SourceAdapter):
     """Norway — Brønnøysundregistrene (open, no auth)."""
 
     country = "NO"
+    # Limited-liability companies only — the PE deal-sourcing universe. Filtered
+    # server-side so we never pull associations, sole proprietorships, etc.
+    ORG_FORMS = ("AS", "ASA")
 
     def fetch(self, limit: int) -> Iterator[Company]:
+        # Deep pagination is capped at 10k results by the API; fine for samples,
+        # but scaling beyond that needs search_after/scroll.
         fetched, page = 0, 0
         with httpx.Client(timeout=30) as client:
             while fetched < limit:
                 size = min(PAGE_SIZE, limit - fetched)
-                resp = client.get(API_URL, params={"page": page, "size": size})
+                params = [("page", page), ("size", size)]
+                params += [("organisasjonsform", form) for form in self.ORG_FORMS]
+                resp = client.get(API_URL, params=params)
                 resp.raise_for_status()
                 entities = resp.json().get("_embedded", {}).get("enheter", [])
                 if not entities:
@@ -42,5 +49,12 @@ class BrregAdapter(SourceAdapter):
             employees=raw.get("antallAnsatte"),
             municipality=raw.get("forretningsadresse", {}).get("kommune"),
             registered_at=raw.get("registreringsdatoEnhetsregisteret"),
+            founded_at=raw.get("stiftelsesdato"),
+            last_accounts_year=raw.get("sisteInnsendteAarsregnskap"),
+            bankrupt=raw.get("konkurs", False),
+            under_liquidation=raw.get("underAvvikling", False),
+            under_forced_liquidation=raw.get("underTvangsavviklingEllerTvangsopplosning", False),
+            vat_registered=raw.get("registrertIMvaregisteret", False),
+            in_group=raw.get("erIKonsern", False),
             description=" ".join(activity) if activity else None,
         )

@@ -11,6 +11,13 @@ COMPANIES_MAPPING = {
             "employees": {"type": "integer"},
             "municipality": {"type": "keyword"},
             "registered_at": {"type": "date"},
+            "founded_at": {"type": "date"},
+            "last_accounts_year": {"type": "integer"},
+            "bankrupt": {"type": "boolean"},
+            "under_liquidation": {"type": "boolean"},
+            "under_forced_liquidation": {"type": "boolean"},
+            "vat_registered": {"type": "boolean"},
+            "in_group": {"type": "boolean"},
             "description": {"type": "text"},
         }
     }

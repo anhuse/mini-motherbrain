@@ -15,4 +15,11 @@ class Company(BaseModel):
     employees: int | None = None
     municipality: str | None = None
     registered_at: date | None = None
+    founded_at: date | None = None
+    last_accounts_year: int | None = None
+    bankrupt: bool = False
+    under_liquidation: bool = False
+    under_forced_liquidation: bool = False
+    vat_registered: bool = False
+    in_group: bool = False
     description: str | None = None
