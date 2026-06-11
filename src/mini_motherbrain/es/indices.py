@@ -6,7 +6,7 @@ from mini_motherbrain.es.mappings import COMPANIES_MAPPING
 # Bump when COMPANIES_MAPPING changes, then run `migrate` to reindex and
 # move the alias. Searches always go through the alias (settings.companies_index);
 # writes target the physical index.
-INDEX_VERSION = 1
+INDEX_VERSION = 2
 
 
 def physical_index() -> str:

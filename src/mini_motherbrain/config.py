@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -10,6 +12,8 @@ class Settings(BaseSettings):
     es_user: str = "elastic"
     es_password: str = "changeme"
     companies_index: str = "companies"
+    # Landing zone for raw source files (e.g. the Brreg bulk dump).
+    data_dir: Path = Path("data")
 
 
 settings = Settings()

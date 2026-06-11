@@ -10,6 +10,6 @@ class SourceAdapter(ABC):
     country: str
 
     @abstractmethod
-    def fetch(self, limit: int) -> Iterator[Company]:
-        """Yield up to `limit` normalised companies."""
+    def fetch(self, limit: int | None = None) -> Iterator[Company]:
+        """Yield up to `limit` normalised companies, or all available if None."""
         raise NotImplementedError

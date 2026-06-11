@@ -1,12 +1,46 @@
 from mini_motherbrain.search.models import SearchRequest
 
 # Facets recomputed on every search so filter options stay consistent
-# with the current query.
+# with the current query. `industries` keys on the code (the dropdown's filter
+# value); `industries_text` carries human-readable labels for the chart.
 AGGREGATIONS = {
     "industries": {"terms": {"field": "industry_code", "size": 20}},
+    "industries_text": {"terms": {"field": "industry_text.raw", "size": 10}},
     "municipalities": {"terms": {"field": "municipality", "size": 20}},
     "org_forms": {"terms": {"field": "org_form", "size": 10}},
+    "founded_years": {
+        "date_histogram": {
+            "field": "founded_at",
+            "calendar_interval": "year",
+            "format": "yyyy",
+            "min_doc_count": 1,
+        }
+    },
 }
+
+# Maps the request's closed sort vocabulary to concrete ES fields (text fields
+# need their keyword subfield to be sortable).
+SORT_FIELDS = {
+    "name": "name.raw",
+    "industry_text": "industry_text.raw",
+    "municipality": "municipality",
+    "employees": "employees",
+    "founded_at": "founded_at",
+}
+
+
+def build_sort(request: SearchRequest) -> list[dict]:
+    """Translate a SearchRequest's sort into ES sort clauses. Empty list means
+    relevance order. A stable org_number tiebreaker keeps pagination from
+    showing duplicate rows when the primary key ties."""
+    if request.sort_field is None:
+        return []
+    order = "desc" if request.sort_desc else "asc"
+    field = SORT_FIELDS[request.sort_field]
+    return [
+        {field: {"order": order, "missing": "_last"}},
+        {"org_number": "asc"},
+    ]
 
 
 def build_query(request: SearchRequest) -> dict:

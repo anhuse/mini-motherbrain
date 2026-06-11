@@ -7,7 +7,10 @@ COMPANIES_MAPPING = {
             "country": {"type": "keyword"},
             "org_form": {"type": "keyword"},
             "industry_code": {"type": "keyword"},
-            "industry_text": {"type": "text"},
+            "industry_text": {
+                "type": "text",
+                "fields": {"raw": {"type": "keyword", "ignore_above": 256}},
+            },
             "employees": {"type": "integer"},
             "municipality": {"type": "keyword"},
             "registered_at": {"type": "date"},

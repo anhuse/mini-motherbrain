@@ -7,3 +7,4 @@ venv/
 .ruff_cache/
 *.egg-info/
 dist/
+data/
