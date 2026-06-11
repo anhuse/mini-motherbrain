@@ -53,3 +53,10 @@ from plain-language questions. Query DSL lives only in `search/queries.py`.
 
 Subclass `SourceAdapter` in `ingestion/adapters/`, implement `fetch()` to yield
 normalised `Company` records, and register it in `ingestion/__main__.py`.
+
+## Future improvements
+
+- More Nordic sources (per CLAUDE.md "Data sources"): Finland (PRH/YTJ),
+  Denmark (CVR), Sweden (Bolagsverket/SCB), and listed-company tickers from
+  Euronext Oslo Børs / Nasdaq Nordic. 2000 NO companies (AS/ASA via Brreg) is
+  the current sample; revisit the limit once more sources are added.
