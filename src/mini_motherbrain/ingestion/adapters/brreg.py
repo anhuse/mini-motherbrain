@@ -3,7 +3,7 @@ from collections.abc import Iterator
 import httpx
 
 from mini_motherbrain.ingestion.adapters.base import SourceAdapter
-from mini_motherbrain.ingestion.models import Company
+from mini_motherbrain.models import Company
 
 API_URL = "https://data.brreg.no/enhetsregisteret/api/enheter"
 PAGE_SIZE = 1000
@@ -20,11 +20,12 @@ class BrregAdapter(SourceAdapter):
     def fetch(self, limit: int) -> Iterator[Company]:
         # Deep pagination is capped at 10k results by the API; fine for samples,
         # but scaling beyond that needs search_after/scroll.
+        # The API offsets results by page × size, so size must stay constant
+        # across requests; we trim to `limit` client-side instead.
         fetched, page = 0, 0
         with httpx.Client(timeout=30) as client:
             while fetched < limit:
-                size = min(PAGE_SIZE, limit - fetched)
-                params = [("page", page), ("size", size)]
+                params = [("page", page), ("size", PAGE_SIZE)]
                 params += [("organisasjonsform", form) for form in self.ORG_FORMS]
                 resp = client.get(API_URL, params=params)
                 resp.raise_for_status()
@@ -34,6 +35,8 @@ class BrregAdapter(SourceAdapter):
                 for raw in entities:
                     yield self._normalise(raw)
                     fetched += 1
+                    if fetched >= limit:
+                        return
                 page += 1
 
     @staticmethod

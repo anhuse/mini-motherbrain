@@ -1,6 +1,59 @@
 from datetime import date
 
-from mini_motherbrain.ingestion.adapters.brreg import BrregAdapter
+from mini_motherbrain.ingestion.adapters import brreg
+from mini_motherbrain.ingestion.adapters.brreg import PAGE_SIZE, BrregAdapter
+
+
+class FakeResponse:
+    def __init__(self, entities):
+        self._entities = entities
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return {"_embedded": {"enheter": self._entities}}
+
+
+class FakeClient:
+    """Serves PAGE_SIZE synthetic companies per page, offset by page × size,
+    mirroring how the Brreg API paginates."""
+
+    requested_sizes: list[int] = []
+
+    def __init__(self, **kwargs):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def get(self, url, params):
+        page = next(v for k, v in params if k == "page")
+        size = next(v for k, v in params if k == "size")
+        FakeClient.requested_sizes.append(size)
+        start = page * size
+        entities = [
+            {"organisasjonsnummer": str(i), "navn": f"COMPANY {i} AS"}
+            for i in range(start, start + size)
+        ]
+        return FakeResponse(entities)
+
+
+def test_fetch_keeps_page_size_constant_and_yields_unique_companies(monkeypatch):
+    """Shrinking `size` on the last page re-reads earlier offsets, so the same
+    companies come back twice and the true yield falls short of the limit."""
+    FakeClient.requested_sizes = []
+    monkeypatch.setattr(brreg.httpx, "Client", FakeClient)
+    limit = PAGE_SIZE + 500
+
+    companies = list(BrregAdapter().fetch(limit))
+
+    assert all(size == PAGE_SIZE for size in FakeClient.requested_sizes)
+    assert len(companies) == limit
+    assert len({c.org_number for c in companies}) == limit
 
 
 def test_normalise_maps_core_fields():

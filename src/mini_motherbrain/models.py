@@ -4,7 +4,8 @@ from pydantic import BaseModel
 
 
 class Company(BaseModel):
-    """Normalised company record, source-agnostic."""
+    """Normalised company record, source-agnostic. Produced by ingestion
+    adapters and returned by the search layer."""
 
     org_number: str
     name: str

@@ -1,4 +1,4 @@
-# Index definition for the normalised Company shape (see ingestion/models.py).
+# Index definition for the normalised Company shape (see models.py).
 COMPANIES_MAPPING = {
     "mappings": {
         "properties": {

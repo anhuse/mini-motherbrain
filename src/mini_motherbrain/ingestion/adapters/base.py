@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
 
-from mini_motherbrain.ingestion.models import Company
+from mini_motherbrain.models import Company
 
 
 class SourceAdapter(ABC):
