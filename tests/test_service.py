@@ -42,6 +42,14 @@ def test_relevance_sort_passes_none():
     assert client.kwargs["sort"] is None
 
 
+def test_tracks_true_total():
+    client = RecordingClient()
+
+    search(SearchRequest(), client=client)
+
+    assert client.kwargs["track_total_hits"] is True
+
+
 def test_date_histogram_uses_key_as_string():
     client = RecordingClient()
 

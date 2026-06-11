@@ -17,6 +17,9 @@ def search(request: SearchRequest, client: Elasticsearch | None = None) -> Searc
         from_=request.offset,
         sort=build_sort(request) or None,
         aggs=AGGREGATIONS,
+        # Report the true match count, not ES's default 10k cap — the summary
+        # and "first N browsable" note depend on it at full-register scale.
+        track_total_hits=True,
     )
     return SearchResult(
         total=resp["hits"]["total"]["value"],
