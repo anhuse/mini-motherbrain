@@ -34,6 +34,10 @@ src/mini_motherbrain/
 │   └── adapters/          # one isolated adapter per source (brreg = Norway)
 ├── search/                # SearchRequest → ES query DSL → typed results
 └── app/                   # Dash front end (widgets only, no query DSL)
+    ├── pages/             # multipage: landing (/), companies, company profile
+    ├── figures.py         # design tokens + shared Plotly template and builders
+    ├── geo.py             # Norway municipality boundaries for the landing map
+    └── assets/style.css   # design system (tokens mirrored in figures.py)
 tests/                     # adapter, pipeline, and query-builder tests (no network)
 ```
 

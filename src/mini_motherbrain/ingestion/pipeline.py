@@ -37,9 +37,7 @@ def index_source(
     client.indices.put_settings(index=target, settings={"refresh_interval": "-1"})
     success = 0
     try:
-        for ok, _ in streaming_bulk(
-            client, actions, chunk_size=chunk_size, request_timeout=120
-        ):
+        for ok, _ in streaming_bulk(client, actions, chunk_size=chunk_size, request_timeout=120):
             success += int(ok)
             if success % 10_000 == 0:
                 logger.info("indexed %d documents", success)
