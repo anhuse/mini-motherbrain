@@ -1,6 +1,6 @@
 from datetime import date
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Company(BaseModel):
@@ -11,8 +11,12 @@ class Company(BaseModel):
     name: str
     country: str
     org_form: str | None = None
-    industry_code: str | None = None
-    industry_text: str | None = None
+    industry_code: str | None = None  # primary NACE code (display, primary facet)
+    industry_text: str | None = None  # primary NACE label (display, facet)
+    # All NACE codes (primary + secondary + tertiary), for industry filtering.
+    industry_codes: list[str] = Field(default_factory=list)
+    # All NACE labels joined, for free-text matching across every line of business.
+    industry_text_all: str | None = None
     employees: int | None = None
     municipality: str | None = None
     registered_at: date | None = None
@@ -24,3 +28,4 @@ class Company(BaseModel):
     vat_registered: bool = False
     in_group: bool = False
     description: str | None = None
+    purpose: str | None = None  # articles-of-association purpose clause

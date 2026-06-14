@@ -32,6 +32,26 @@ def test_fetch_streams_and_filters_to_as_asa(tmp_path):
     assert companies[0].country == "NO"
 
 
+def test_normalise_collects_all_nace_codes_and_purpose(tmp_path):
+    raw = {
+        "organisasjonsnummer": "5",
+        "navn": "OMEGA AS",
+        "organisasjonsform": {"kode": "AS"},
+        "naeringskode1": {"kode": "06.200", "beskrivelse": "Utvinning av naturgass"},
+        "naeringskode2": {"kode": "06.100", "beskrivelse": "Utvinning av råolje"},
+        "vedtektsfestetFormaal": ["Utvinning av", "olje og gass."],
+    }
+    _place_file(tmp_path, [raw])
+
+    [company] = list(BrregBulkAdapter(data_dir=tmp_path).fetch())
+
+    # Primary stays for display; all codes collected for filtering.
+    assert company.industry_code == "06.200"
+    assert company.industry_codes == ["06.200", "06.100"]
+    assert "Utvinning av råolje" in company.industry_text_all
+    assert company.purpose == "Utvinning av olje og gass."
+
+
 def test_fetch_respects_limit(tmp_path):
     _place_file(tmp_path)
 
