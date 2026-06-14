@@ -52,14 +52,25 @@ def build_query(request: SearchRequest) -> dict:
             {
                 "multi_match": {
                     "query": request.text,
-                    "fields": ["name^3", "industry_text", "description"],
+                    "fields": [
+                        "name^3",
+                        "industry_text",
+                        "industry_text_all",
+                        "description",
+                        "purpose",
+                    ],
+                    # Tolerate typos and spelling variants (ø/o, aa/å); require
+                    # most terms to match so fuzz + the default OR stays precise.
+                    "fuzziness": "AUTO",
+                    "minimum_should_match": "2<70%",
                 }
             }
         )
 
     filters: list[dict] = []
     if request.industry_codes:
-        filters.append({"terms": {"industry_code": request.industry_codes}})
+        # Match against every NACE code a company carries, not just its primary.
+        filters.append({"terms": {"industry_codes": request.industry_codes}})
     if request.org_forms:
         filters.append({"terms": {"org_form": request.org_forms}})
     if request.municipalities:

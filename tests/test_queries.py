@@ -13,7 +13,16 @@ def test_free_text_searches_name_industry_and_description():
 
     [match] = query["bool"]["must"]
     assert match["multi_match"]["query"] == "oil"
-    assert "name^3" in match["multi_match"]["fields"]
+    fields = match["multi_match"]["fields"]
+    assert "name^3" in fields
+    # Free text reaches the purpose clause and every NACE label, not just the primary.
+    assert {"industry_text_all", "purpose"} <= set(fields)
+
+
+def test_free_text_is_typo_tolerant():
+    match = build_query(SearchRequest(text="oil"))["bool"]["must"][0]
+
+    assert match["multi_match"]["fuzziness"] == "AUTO"
 
 
 def test_filters_combine():
@@ -26,7 +35,8 @@ def test_filters_combine():
 
     filters = build_query(request)["bool"]["filter"]
 
-    assert {"terms": {"industry_code": ["06.100"]}} in filters
+    # Industry filter matches against all NACE codes a company carries.
+    assert {"terms": {"industry_codes": ["06.100"]}} in filters
     assert {"terms": {"municipality": ["STAVANGER"]}} in filters
     assert {"range": {"employees": {"gte": 10, "lte": 500}}} in filters
 

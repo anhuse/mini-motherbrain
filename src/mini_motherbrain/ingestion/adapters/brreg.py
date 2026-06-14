@@ -59,13 +59,24 @@ class BrregAdapter(SourceAdapter):
     @staticmethod
     def _normalise(raw: dict) -> Company:
         activity = raw.get("aktivitet")
+        purpose = raw.get("vedtektsfestetFormaal")
+        # Brreg carries up to three NACE codes (naeringskode1..3). We keep the
+        # primary for display/facets and collect all of them for filtering and
+        # free-text matching across every line of business.
+        nace = [raw.get(f"naeringskode{n}") for n in (1, 2, 3)]
+        nace = [n for n in nace if n and n.get("kode")]
         return Company(
             org_number=raw["organisasjonsnummer"],
             name=raw["navn"],
             country="NO",
             org_form=raw.get("organisasjonsform", {}).get("kode"),
-            industry_code=raw.get("naeringskode1", {}).get("kode"),
-            industry_text=raw.get("naeringskode1", {}).get("beskrivelse"),
+            industry_code=nace[0]["kode"] if nace else None,
+            industry_text=nace[0].get("beskrivelse") if nace else None,
+            industry_codes=[n["kode"] for n in nace],
+            industry_text_all=" ".join(
+                n["beskrivelse"] for n in nace if n.get("beskrivelse")
+            )
+            or None,
             employees=raw.get("antallAnsatte"),
             municipality=raw.get("forretningsadresse", {}).get("kommune"),
             registered_at=raw.get("registreringsdatoEnhetsregisteret"),
@@ -77,6 +88,7 @@ class BrregAdapter(SourceAdapter):
             vat_registered=raw.get("registrertIMvaregisteret", False),
             in_group=raw.get("erIKonsern", False),
             description=" ".join(activity) if activity else None,
+            purpose=" ".join(purpose) if purpose else None,
         )
 
 
