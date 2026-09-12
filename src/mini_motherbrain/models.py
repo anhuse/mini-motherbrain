@@ -29,3 +29,17 @@ class Company(BaseModel):
     in_group: bool = False
     description: str | None = None
     purpose: str | None = None  # articles-of-association purpose clause
+
+    # Financials from the Regnskapsregisteret (annual-accounts) enrichment.
+    # Latest filed year only (the open API tier exposes no history). Monetary
+    # fields are converted to NOK so a single band is comparable across filers;
+    # accounts_currency keeps the originally reported currency for transparency.
+    revenue: int | None = None  # sumDriftsinntekter → NOK
+    operating_profit: int | None = None  # driftsresultat (≈ EBIT) → NOK
+    operating_margin: float | None = None  # operating_profit / revenue
+    net_result: int | None = None  # aarsresultat → NOK
+    total_assets: int | None = None  # sumEiendeler → NOK
+    equity: int | None = None  # sumEgenkapital → NOK
+    total_debt: int | None = None  # sumGjeld → NOK
+    accounts_year: int | None = None  # year from regnskapsperiode.tilDato
+    accounts_currency: str | None = None  # originally reported currency (pre-conversion)

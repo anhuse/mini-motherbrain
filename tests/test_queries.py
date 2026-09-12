@@ -41,6 +41,26 @@ def test_filters_combine():
     assert {"range": {"employees": {"gte": 10, "lte": 500}}} in filters
 
 
+def test_revenue_and_margin_range_filters():
+    request = SearchRequest(
+        min_revenue=50_000_000,
+        max_revenue=500_000_000,
+        min_operating_margin=0.10,
+    )
+
+    filters = build_query(request)["bool"]["filter"]
+
+    assert {"range": {"revenue": {"gte": 50_000_000, "lte": 500_000_000}}} in filters
+    assert {"range": {"operating_margin": {"gte": 0.10}}} in filters
+
+
+def test_no_financial_filters_when_unset():
+    filters = build_query(SearchRequest())["bool"]["filter"]
+
+    assert not any("revenue" in f.get("range", {}) for f in filters)
+    assert not any("operating_margin" in f.get("range", {}) for f in filters)
+
+
 def test_exclude_inactive_filters_all_status_flags():
     filters = build_query(SearchRequest(exclude_inactive=True))["bool"]["filter"]
 

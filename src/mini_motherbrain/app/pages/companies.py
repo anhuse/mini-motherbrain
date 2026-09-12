@@ -1,5 +1,5 @@
-"""Companies page: the working search tool. One callback recomputes results,
-facet options and charts together so everything stays consistent with the
+"""Companies page: the working search tool. One callback recomputes the results
+table and facet options together so everything stays consistent with the
 current query."""
 
 from math import ceil
@@ -8,7 +8,6 @@ import dash
 from dash import Input, Output, callback, callback_context, dash_table, dcc, html
 from dash.dash_table.Format import Format, Group
 
-from mini_motherbrain.app.figures import GRAPH_CONFIG, founded_figure, industry_figure
 from mini_motherbrain.search.models import MAX_RESULT_WINDOW, SearchRequest
 from mini_motherbrain.search.service import search
 
@@ -26,6 +25,13 @@ COLUMNS = [
     {"name": "Industry", "id": "industry_text"},
     {"name": "Municipality", "id": "municipality"},
     {"name": "Employees", "id": "employees", "type": "numeric", "format": Format(group=Group.yes)},
+    {
+        "name": "Revenue (NOK m)",
+        "id": "revenue",
+        "type": "numeric",
+        "format": Format(group=Group.yes),
+    },
+    {"name": "Operating margin", "id": "operating_margin"},
     {"name": "Founded", "id": "founded_at"},
 ]
 
@@ -68,6 +74,29 @@ def layout(q: str | None = None, **_) -> html.Div:
                         value=[],
                         className="toolbar-toggle",
                     ),
+                    dcc.Input(
+                        id="min-revenue",
+                        type="number",
+                        placeholder="Min revenue (NOK m)",
+                        debounce=True,
+                        min=0,
+                        className="toolbar-filter",
+                    ),
+                    dcc.Input(
+                        id="max-revenue",
+                        type="number",
+                        placeholder="Max revenue (NOK m)",
+                        debounce=True,
+                        min=0,
+                        className="toolbar-filter",
+                    ),
+                    dcc.Input(
+                        id="min-margin",
+                        type="number",
+                        placeholder="Min margin %",
+                        debounce=True,
+                        className="toolbar-filter",
+                    ),
                 ],
                 className="toolbar",
             ),
@@ -105,30 +134,17 @@ def layout(q: str | None = None, **_) -> html.Div:
                     style_data={"borderBottom": "1px solid #e8e1d6"},
                     style_cell_conditional=[
                         {"if": {"column_id": "employees"}, "textAlign": "right", "width": "110px"},
+                        {"if": {"column_id": "revenue"}, "textAlign": "right", "width": "130px"},
+                        {
+                            "if": {"column_id": "operating_margin"},
+                            "textAlign": "right",
+                            "width": "130px",
+                        },
                         {"if": {"column_id": "founded_at"}, "width": "120px"},
                         {"if": {"column_id": "municipality"}, "width": "180px"},
                     ],
                 ),
                 className="card table-card",
-            ),
-            html.Div(
-                [
-                    html.Div(
-                        [
-                            html.H3("Top industries", className="card-title"),
-                            dcc.Graph(id="industry-chart", config=GRAPH_CONFIG),
-                        ],
-                        className="card chart-card",
-                    ),
-                    html.Div(
-                        [
-                            html.H3("Companies by founding year", className="card-title"),
-                            dcc.Graph(id="founded-chart", config=GRAPH_CONFIG),
-                        ],
-                        className="card chart-card",
-                    ),
-                ],
-                className="chart-row",
             ),
         ],
         className="page",
@@ -142,16 +158,20 @@ def layout(q: str | None = None, **_) -> html.Div:
     Output("summary", "children"),
     Output("industry", "options"),
     Output("municipality", "options"),
-    Output("industry-chart", "figure"),
-    Output("founded-chart", "figure"),
     Input("query", "value"),
     Input("industry", "value"),
     Input("municipality", "value"),
     Input("active-only", "value"),
+    Input("min-revenue", "value"),
+    Input("max-revenue", "value"),
+    Input("min-margin", "value"),
     Input("results-table", "page_current"),
     Input("results-table", "sort_by"),
 )
-def update(query, industry, municipality, active_only, page_current, sort_by):
+def update(
+    query, industry, municipality, active_only, min_revenue, max_revenue, min_margin,
+    page_current, sort_by,
+):
     # Any change other than paging resets to the first page — otherwise a filter
     # change could leave us on a page past the new result set.
     if callback_context.triggered_id != "results-table":
@@ -165,6 +185,11 @@ def update(query, industry, municipality, active_only, page_current, sort_by):
         industry_codes=[industry] if industry else [],
         municipalities=[municipality] if municipality else [],
         exclude_inactive=bool(active_only),
+        # Toolbar takes revenue in millions and margin in percent; the index
+        # stores revenue in NOK and margin as a fraction.
+        min_revenue=int(min_revenue * 1_000_000) if min_revenue is not None else None,
+        max_revenue=int(max_revenue * 1_000_000) if max_revenue is not None else None,
+        min_operating_margin=min_margin / 100 if min_margin is not None else None,
         size=PAGE_SIZE,
         offset=page_current * PAGE_SIZE,
         sort_field=sort_field,
@@ -182,6 +207,10 @@ def update(query, industry, municipality, active_only, page_current, sort_by):
         safe_name = c.name.replace("[", "(").replace("]", ")")
         row["name"] = f"[{safe_name}](/company/{c.org_number})"
         row["municipality"] = (c.municipality or "").title()
+        row["revenue"] = round(c.revenue / 1_000_000) if c.revenue is not None else None
+        row["operating_margin"] = (
+            f"{c.operating_margin * 100:.1f}%" if c.operating_margin is not None else "—"
+        )
         rows.append(row)
     page_count = min(ceil(result.total / PAGE_SIZE), MAX_PAGES) if result.total else 1
 
@@ -202,6 +231,4 @@ def update(query, industry, municipality, active_only, page_current, sort_by):
         summary,
         [{"label": f"{b.key} ({b.count:,})", "value": b.key} for b in result.facets["industries"]],
         options("municipalities"),
-        industry_figure(result.facets["industries_text"]),
-        founded_figure(result.facets["founded_years"]),
     )

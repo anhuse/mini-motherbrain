@@ -26,3 +26,13 @@ Search and analytics platform for Nordic companies, modelled on EQT's Motherbrai
 - No secrets in the repo
 - Sample a few thousand Norwegian companies before scaling
 - Keep off work hardware
+
+## Development workflow
+- HTTP client: `httpx` throughout (not `requests`) — match `BrregAdapter`
+- Monetary ES fields: use `long`, not `integer` — NOK revenues exceed int32 (~2.1bn)
+- ES index migrations: `migrate()` reindexes old `_source` (safe when new fields are empty); use `swap_alias()` instead when a new field is populated during ingestion (migrate would clobber it)
+- ES client default timeout is too short for full-register reindexes — the reindex runs to completion server-side, but the client drops before the alias swap; recover with `swap_alias()`
+- Dash DataTable: inline `style_*` props outrank CSS — always style table cells inline
+- Dash pages: importing a page module standalone raises `PageError` (register_page needs the app instantiated first) — not a bug; test via `from mini_motherbrain.app.dashboard import app` first
+- `gh` CLI auth is expired and the PAT lacks PR-create scope — give the browser compare URL instead
+- Docker Desktop: launch via PowerShell `Start-Process`, not Bash (Start-Process not in PATH there)
