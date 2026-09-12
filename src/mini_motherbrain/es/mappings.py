@@ -32,6 +32,18 @@ COMPANIES_MAPPING = {
             "in_group": {"type": "boolean"},
             "description": {"type": "text", "analyzer": "norwegian"},
             "purpose": {"type": "text", "analyzer": "norwegian"},
+            # Financials from the Regnskapsregisteret enrichment (all in NOK).
+            # `long`, not `integer`: NOK revenues exceed the int32 ceiling
+            # (~2.1bn) — Equinor alone is ~700bn NOK.
+            "revenue": {"type": "long"},
+            "operating_profit": {"type": "long"},
+            "net_result": {"type": "long"},
+            "total_assets": {"type": "long"},
+            "equity": {"type": "long"},
+            "total_debt": {"type": "long"},
+            "operating_margin": {"type": "float"},
+            "accounts_year": {"type": "integer"},
+            "accounts_currency": {"type": "keyword"},
         }
     }
 }

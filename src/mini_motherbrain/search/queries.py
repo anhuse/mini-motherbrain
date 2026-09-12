@@ -26,6 +26,9 @@ SORT_FIELDS = {
     "municipality": "municipality",
     "employees": "employees",
     "founded_at": "founded_at",
+    "revenue": "revenue",
+    "operating_profit": "operating_profit",
+    "operating_margin": "operating_margin",
 }
 
 
@@ -83,6 +86,22 @@ def build_query(request: SearchRequest) -> dict:
         employees["lte"] = request.max_employees
     if employees:
         filters.append({"range": {"employees": employees}})
+
+    revenue: dict = {}
+    if request.min_revenue is not None:
+        revenue["gte"] = request.min_revenue
+    if request.max_revenue is not None:
+        revenue["lte"] = request.max_revenue
+    if revenue:
+        filters.append({"range": {"revenue": revenue}})
+
+    margin: dict = {}
+    if request.min_operating_margin is not None:
+        margin["gte"] = request.min_operating_margin
+    if request.max_operating_margin is not None:
+        margin["lte"] = request.max_operating_margin
+    if margin:
+        filters.append({"range": {"operating_margin": margin}})
 
     if request.exclude_inactive:
         filters += [

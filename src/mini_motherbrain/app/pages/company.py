@@ -60,6 +60,7 @@ def layout(org_number: str | None = None, **_) -> html.Div:
                 ],
                 className="fact-grid card",
             ),
+            _financials(company),
             html.Div(
                 [
                     html.H3("Registered activity", className="card-title"),
@@ -96,6 +97,42 @@ def _fact(label: str, value: str) -> html.Div:
         [html.Span(label, className="fact-label"), html.Span(value, className="fact-value")],
         className="fact",
     )
+
+
+def _financials(company: Company):
+    """A second fact grid for the annual-accounts figures, shown only once a
+    company has been enriched (accounts_year present)."""
+    if company.accounts_year is None:
+        return None
+    title = f"Financials ({company.accounts_year})"
+    if company.accounts_currency and company.accounts_currency != "NOK":
+        title += f" · converted from {company.accounts_currency}"
+    return html.Div(
+        [
+            html.H3(title, className="card-title"),
+            html.Div(
+                [
+                    _fact("Revenue", _nok(company.revenue)),
+                    _fact("Operating profit", _nok(company.operating_profit)),
+                    _fact("Operating margin", _pct(company.operating_margin)),
+                    _fact("Net result", _nok(company.net_result)),
+                    _fact("Total assets", _nok(company.total_assets)),
+                    _fact("Equity", _nok(company.equity)),
+                ],
+                className="fact-grid",
+            ),
+        ],
+        className="card",
+    )
+
+
+def _nok(value: int | None) -> str:
+    # Figures are stored in NOK; show millions for readability.
+    return f"{value / 1_000_000:,.1f} NOK m" if value is not None else "—"
+
+
+def _pct(fraction: float | None) -> str:
+    return f"{fraction * 100:.1f}%" if fraction is not None else "—"
 
 
 def _industry(company: Company) -> str:

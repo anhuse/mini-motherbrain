@@ -55,7 +55,7 @@ def _secondary_code_delta(client, code: str) -> None:
     primary = client.count(index=alias, query={"term": {"industry_code": code}})["count"]
     any_code = client.count(index=alias, query={"term": {"industry_codes": code}})["count"]
     print(f"[secondary-codes] NACE {code}")
-    print(f"  expect: 'any' >= 'primary'; the gap is companies surfaced only via secondary codes")
+    print("  expect: 'any' >= 'primary'; the gap is companies surfaced only via secondary codes")
     print(f"  primary only:   {primary}")
     print(f"  any (primary+secondary): {any_code}")
     print(f"  extra surfaced: {any_code - primary}")

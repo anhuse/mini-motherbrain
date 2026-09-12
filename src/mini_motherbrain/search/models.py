@@ -7,7 +7,16 @@ from mini_motherbrain.models import Company
 # Closed vocabulary of sortable fields. Keeping it a Literal means the Phase 2
 # LLM translator gets a validated set of names and no ES field names leak out
 # of the search package.
-SortField = Literal["name", "industry_text", "municipality", "employees", "founded_at"]
+SortField = Literal[
+    "name",
+    "industry_text",
+    "municipality",
+    "employees",
+    "founded_at",
+    "revenue",
+    "operating_profit",
+    "operating_margin",
+]
 
 # ES rejects from + size beyond this window; we cap requests rather than fail.
 MAX_RESULT_WINDOW = 10_000
@@ -23,6 +32,11 @@ class SearchRequest(BaseModel):
     municipalities: list[str] = Field(default_factory=list)
     min_employees: int | None = None
     max_employees: int | None = None
+    # Financial screening (NOK). Operating margin is a fraction, e.g. 0.10 = 10%.
+    min_revenue: int | None = None
+    max_revenue: int | None = None
+    min_operating_margin: float | None = None
+    max_operating_margin: float | None = None
     exclude_inactive: bool = False
     size: int = 20
     offset: int = Field(default=0, ge=0)

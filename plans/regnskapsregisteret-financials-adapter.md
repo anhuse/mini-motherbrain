@@ -1,7 +1,10 @@
 # Plan — Regnskapsregisteret financials adapter
 
-> Status: **not started** — parked for a future session (scoped too large for one
-> sitting). Picks up the first PE-sourcing feature: financial screening.
+> Status: **implemented** (2026-09-12) on branch `feat-regnskap-financials`.
+> Index bumped to v4; adapter, enrichment pipeline, search filters, table columns
+> and profile financials all built and verified. A 2,000-company sample was
+> enriched from the live API and validated end to end (see notes at the bottom).
+> The plan text below is kept as the design record.
 
 ## Context
 
@@ -194,6 +197,37 @@ Usage: `mmb-ingest regnskap --limit 2000`.
   avoid int32 overflow; (c) the API is flagged temporary — cache protects us if it
   goes away; (d) operating margin is meaningless when revenue is ~0 (holding cos) —
   store None and exclude from the margin filter rather than divide by near-zero.
+
+## Implementation notes (2026-09-12) — deviations from the plan above
+- **httpx, not requests.** The codebase already standardises on `httpx`
+  (BrregAdapter), so the adapter uses a shared `httpx.Client` across the
+  `ThreadPoolExecutor` (12 workers, 0.05s per-request delay).
+- **`operating_margin` is sortable.** Added it to the `SortField` Literal and
+  `SORT_FIELDS` (not just `revenue`/`operating_profit`) so the "Operating margin"
+  table column can't produce an invalid sort field when its header is clicked.
+- **Latest-accounts selection.** `_select_latest` prefers company accounts
+  (`regnskapstype == "SELSKAP"`) over consolidated group figures (`KONSERN`),
+  then takes the newest `regnskapsperiode.tilDato`.
+- **Skipped (nice-to-have):** the `revenue_ranges` size-distribution aggregation.
+- **Migration reality:** `migrate()`'s reindex of 428k v3→v4 outran the ES
+  client's default request timeout (the reindex kept running server-side and
+  finished; only the client connection dropped before the alias swap). Recovered
+  with the new `swap_alias()` helper. For a from-scratch v4 build this is a
+  non-issue; if re-running, either raise the client timeout or reindex then
+  `swap_alias()`.
+
+### Verification done
+- 37 unit tests pass, ruff clean.
+- 2,000-company sample enriched from the live API → cached under
+  `data/raw/regnskap/`; 1,506 had revenue, currency mix NOK/USD/EUR with USD/EUR
+  converted to NOK (e.g. RFTANKERS IV TOPCO 205.5m NOK from USD).
+- `long` mapping confirmed necessary — Norwegian Air Shuttle AOC AS revenue
+  ~14.9bn NOK exceeds int32.
+- Search service range filter (rev 50–500m NOK + margin ≥10%) → 13 sensible
+  matches; company profile renders the Financials card incl. converted-from-USD
+  note; companies-page row formatting shows revenue in NOK m and margin as %.
+- **Not done:** a real-browser (Playwright) eyeball — Playwright isn't installed;
+  every code path was exercised functionally instead.
 
 ## When picked up — related sourcing follow-ups (not in this plan)
 - Visualise the sourcing funnel/flow on the front end (see layout preference in
