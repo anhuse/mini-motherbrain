@@ -317,26 +317,32 @@ body {
   background: var(--orange-deep);
 }
 
-.btn {
-  border: 1px solid var(--ink);
-  background: var(--ink);
-  color: #fff;
+/* ---------- Screen page: guided screening flow ---------- */
+
+.page-head-right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.btn-reset {
+  border: 1px solid var(--hairline);
+  background: transparent;
+  color: var(--muted);
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
-  padding: 10px 22px;
+  padding: 8px 16px;
   border-radius: var(--radius);
   cursor: pointer;
-  transition: background 120ms ease;
+  transition: border-color 120ms ease, color 120ms ease;
 }
 
-.btn:hover {
-  background: var(--orange);
+.btn-reset:hover {
   border-color: var(--orange);
+  color: var(--orange);
 }
-
-/* ---------- Screen page: guided screening flow ---------- */
 
 /* chevron strip — the sourcing funnel, horizontal and clickable */
 .screen-flow {
@@ -541,62 +547,6 @@ body {
   cursor: pointer;
 }
 
-/* results beside a persistent shortlist */
-.screen-body {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 20px;
-  align-items: start;
-}
-
-.screen-aside {
-  padding: 20px 22px;
-  position: sticky;
-  top: 24px;
-}
-
-.aside-title {
-  font-family: var(--serif);
-  font-size: 18px;
-  font-weight: 600;
-  margin: 0 0 2px;
-}
-
-.aside-count {
-  font-size: 13px;
-  color: var(--muted);
-  margin: 0 0 14px;
-}
-
-.shortlist-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 16px;
-  max-height: 360px;
-  overflow-y: auto;
-}
-
-.shortlist-item {
-  font-size: 13px;
-  color: var(--ink);
-  padding: 8px 10px;
-  background: var(--bg);
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius);
-}
-
-.shortlist-empty {
-  font-size: 13px;
-  font-style: italic;
-  color: var(--faint);
-  margin: 0 0 16px;
-}
-
-.aside-export {
-  width: 100%;
-  height: 44px;
-}
 
 .hero-stats {
   display: flex;

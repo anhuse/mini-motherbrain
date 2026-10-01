@@ -2,12 +2,9 @@
 screening flow. A horizontal chevron strip shows how a thesis narrows the
 register stage by stage (All AS/ASA → Active → Industry → Size → Profitability)
 with a live count per stage; clicking a stage reveals just that step's controls
-below. The results table feeds a persistent shortlist side panel that exports to
-CSV. Separate callbacks keep the funnel counts, the results, the step navigation
-and the shortlist consistent with the current filters."""
+below. Separate callbacks keep the funnel counts, the results and the step
+navigation consistent with the current filters; a Reset button clears them."""
 
-import csv
-import io
 from dataclasses import dataclass
 from math import ceil
 
@@ -15,13 +12,11 @@ import dash
 from dash import (
     Input,
     Output,
-    State,
     callback,
     callback_context,
     dash_table,
     dcc,
     html,
-    no_update,
 )
 from dash.dash_table.Format import Format, Group
 
@@ -76,6 +71,11 @@ STEP_META = [
 # Step shown on first load: the thesis-scope step (the first with controls).
 DEFAULT_STEP = 1
 
+# Default filter values, shared by the initial layout and the Reset button.
+# Active-only defaults on: deal sourcing almost always wants live companies, and
+# it makes the funnel narrow meaningfully from the first stage.
+ACTIVE_DEFAULT = ["yes"]
+
 COLUMNS = [
     {"name": "Name", "id": "name", "presentation": "markdown"},
     {"name": "Industry", "id": "industry_text"},
@@ -103,15 +103,16 @@ def _filters(query, municipality, min_employees, max_employees, min_revenue, min
     }
 
 
-def _stage_request(stage: FunnelStage, base: dict, industry) -> SearchRequest:
+def _stage_request(stage: FunnelStage, base: dict, industry, active_only: bool) -> SearchRequest:
     """Build the SearchRequest for one funnel stage. Text and municipality (the
     thesis scope) apply from the active stage onward; the stage flags gate the
-    dimension-specific filters."""
+    dimension-specific filters. The active filter follows the toggle so the
+    funnel and the results table always agree."""
     scoped = stage.active or stage.industry or stage.size or stage.margin
     return SearchRequest(
         text=base["text"] if scoped else None,
         municipalities=base["municipalities"] if scoped else [],
-        exclude_inactive=stage.active,
+        exclude_inactive=stage.active and active_only,
         industry_codes=[industry] if stage.industry and industry else [],
         min_employees=base["min_employees"] if stage.size else None,
         max_employees=base["max_employees"] if stage.size else None,
@@ -121,11 +122,11 @@ def _stage_request(stage: FunnelStage, base: dict, industry) -> SearchRequest:
     )
 
 
-def _funnel_counts(base: dict, industry) -> list[int]:
+def _funnel_counts(base: dict, industry, active_only: bool) -> list[int]:
     client = get_client()
     counts = []
     for stage in FUNNEL_STAGES:
-        req = _stage_request(stage, base, industry)
+        req = _stage_request(stage, base, industry, active_only)
         resp = client.search(
             index=settings.companies_index,
             query=build_query(req),
@@ -179,7 +180,7 @@ def _step_controls(index: int) -> list:
             dcc.Checklist(
                 id="screen-active-only",
                 options=[{"label": "Active companies only", "value": "yes"}],
-                value=[],
+                value=ACTIVE_DEFAULT,
                 className="step-check",
             ),
         ]
@@ -272,20 +273,21 @@ def _row(c):
     return row
 
 
-def _display_name(markdown: str) -> str:
-    """Pull the display name out of a '[Name](/company/..)' markdown cell."""
-    if markdown.startswith("[") and "]" in markdown:
-        return markdown[1 : markdown.index("]")]
-    return markdown
-
-
 def layout(**_) -> html.Div:
     return html.Div(
         [
             html.Div(
                 [
                     html.H1("Screen", className="page-title"),
-                    html.P(id="screen-summary", className="result-count"),
+                    html.Div(
+                        [
+                            html.P(id="screen-summary", className="result-count"),
+                            html.Button(
+                                "Reset", id="screen-reset", n_clicks=0, className="btn-reset"
+                            ),
+                        ],
+                        className="page-head-right",
+                    ),
                 ],
                 className="page-head",
             ),
@@ -302,71 +304,49 @@ def layout(**_) -> html.Div:
                 [_step_panel(i) for i in range(len(FUNNEL_STAGES))],
                 className="step-stack card",
             ),
-            # Results beside a persistent shortlist side panel.
             html.Div(
-                [
-                    html.Div(
-                        dash_table.DataTable(
-                            id="screen-results",
-                            columns=COLUMNS,
-                            markdown_options={"link_target": "_self"},
-                            page_action="custom",
-                            page_current=0,
-                            page_size=PAGE_SIZE,
-                            sort_action="custom",
-                            sort_mode="single",
-                            sort_by=[],
-                            row_selectable="multi",
-                            selected_rows=[],
-                            cell_selectable=False,
-                            style_as_list_view=True,
-                            style_cell={
-                                "fontFamily": "Archivo, 'Helvetica Neue', sans-serif",
-                                "fontSize": "14px",
-                                "textAlign": "left",
-                                "padding": "12px 14px",
-                                "backgroundColor": "transparent",
-                            },
-                            style_header={
-                                "fontSize": "11px",
-                                "fontWeight": "600",
-                                "letterSpacing": "0.14em",
-                                "textTransform": "uppercase",
-                                "color": "#6e675e",
-                                "borderBottom": "2px solid #1c1814",
-                                "paddingTop": "16px",
-                            },
-                            style_data={"borderBottom": "1px solid #e8e1d6"},
-                            style_cell_conditional=[
-                                {"if": {"column_id": "employees"}, "textAlign": "right", "width": "110px"},
-                                {"if": {"column_id": "revenue"}, "textAlign": "right", "width": "130px"},
-                                {
-                                    "if": {"column_id": "operating_margin"},
-                                    "textAlign": "right",
-                                    "width": "130px",
-                                },
-                                {"if": {"column_id": "founded_at"}, "width": "120px"},
-                                {"if": {"column_id": "municipality"}, "width": "180px"},
-                            ],
-                        ),
-                        className="card table-card",
-                    ),
-                    html.Div(
-                        [
-                            html.H3("Shortlist", className="aside-title"),
-                            html.P(id="screen-selection-summary", className="aside-count"),
-                            html.Div(id="screen-shortlist-list", className="shortlist-list"),
-                            html.Button(
-                                "Export CSV",
-                                id="screen-export-btn",
-                                className="btn-primary aside-export",
-                            ),
-                            dcc.Download(id="screen-download"),
-                        ],
-                        className="screen-aside card",
-                    ),
-                ],
-                className="screen-body",
+                dash_table.DataTable(
+                    id="screen-results",
+                    columns=COLUMNS,
+                    markdown_options={"link_target": "_self"},
+                    page_action="custom",
+                    page_current=0,
+                    page_size=PAGE_SIZE,
+                    sort_action="custom",
+                    sort_mode="single",
+                    sort_by=[],
+                    cell_selectable=False,
+                    style_as_list_view=True,
+                    style_cell={
+                        "fontFamily": "Archivo, 'Helvetica Neue', sans-serif",
+                        "fontSize": "14px",
+                        "textAlign": "left",
+                        "padding": "12px 14px",
+                        "backgroundColor": "transparent",
+                    },
+                    style_header={
+                        "fontSize": "11px",
+                        "fontWeight": "600",
+                        "letterSpacing": "0.14em",
+                        "textTransform": "uppercase",
+                        "color": "#6e675e",
+                        "borderBottom": "2px solid #1c1814",
+                        "paddingTop": "16px",
+                    },
+                    style_data={"borderBottom": "1px solid #e8e1d6"},
+                    style_cell_conditional=[
+                        {"if": {"column_id": "employees"}, "textAlign": "right", "width": "110px"},
+                        {"if": {"column_id": "revenue"}, "textAlign": "right", "width": "130px"},
+                        {
+                            "if": {"column_id": "operating_margin"},
+                            "textAlign": "right",
+                            "width": "130px",
+                        },
+                        {"if": {"column_id": "founded_at"}, "width": "120px"},
+                        {"if": {"column_id": "municipality"}, "width": "180px"},
+                    ],
+                ),
+                className="card table-card",
             ),
         ],
         className="page screen-page",
@@ -379,14 +359,17 @@ def layout(**_) -> html.Div:
     Input("screen-query", "value"),
     Input("screen-industry", "value"),
     Input("screen-municipality", "value"),
+    Input("screen-active-only", "value"),
     Input("screen-min-employees", "value"),
     Input("screen-max-employees", "value"),
     Input("screen-min-revenue", "value"),
     Input("screen-min-margin", "value"),
 )
-def render_funnel(query, industry, municipality, min_employees, max_employees, min_revenue, min_margin):
+def render_funnel(
+    query, industry, municipality, active_only, min_employees, max_employees, min_revenue, min_margin
+):
     base = _filters(query, municipality, min_employees, max_employees, min_revenue, min_margin)
-    counts = _funnel_counts(base, industry)
+    counts = _funnel_counts(base, industry, bool(active_only))
     initial = counts[0] or 1
 
     chevrons = [
@@ -488,49 +471,17 @@ def update(
 
 
 @callback(
-    Output("screen-shortlist-list", "children"),
-    Output("screen-selection-summary", "children"),
-    Input("screen-results", "selected_rows"),
-    State("screen-results", "data"),
-)
-def shortlist(selected_rows, data):
-    selected_rows = selected_rows or []
-    data = data or []
-
-    items = [
-        html.Div(_display_name(data[i].get("name", "")), className="shortlist-item")
-        for i in selected_rows
-        if i < len(data)
-    ]
-    if not items:
-        items = [
-            html.P(
-                "Tick companies in the table to build a shortlist.",
-                className="shortlist-empty",
-            )
-        ]
-    return items, f"{len(selected_rows)} selected"
-
-
-@callback(
-    Output("screen-download", "data"),
-    Input("screen-export-btn", "n_clicks"),
-    State("screen-results", "selected_rows"),
-    State("screen-results", "data"),
+    Output("screen-query", "value"),
+    Output("screen-municipality", "value"),
+    Output("screen-industry", "value"),
+    Output("screen-active-only", "value"),
+    Output("screen-min-employees", "value"),
+    Output("screen-max-employees", "value"),
+    Output("screen-min-revenue", "value"),
+    Output("screen-min-margin", "value"),
+    Input("screen-reset", "n_clicks"),
     prevent_initial_call=True,
 )
-def export(n_clicks, selected_rows, data):
-    selected_rows = selected_rows or []
-    if not selected_rows:
-        return no_update
-
-    fields = [c["id"] for c in COLUMNS]
-    headers = [c["name"] for c in COLUMNS]
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(headers)
-    for i in selected_rows:
-        if i < len(data):
-            writer.writerow([data[i].get(f, "") for f in fields])
-
-    return dcc.send_string(buffer.getvalue(), "shortlist.csv")
+def reset(_n_clicks):
+    """Clear every filter back to its default in one click."""
+    return "", None, None, ACTIVE_DEFAULT, None, None, None, None
