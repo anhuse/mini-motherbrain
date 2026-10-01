@@ -40,6 +40,7 @@ sidebar = html.Aside(
                 html.Span("Explore", className="nav-section"),
                 dcc.Link("Home", href="/", id="nav-home", className="nav-link"),
                 dcc.Link("Companies", href="/companies", id="nav-companies", className="nav-link"),
+                dcc.Link("Screen", href="/screen", id="nav-screen", className="nav-link"),
                 html.Span("In the works", className="nav-section"),
                 html.Span(
                     ["Markets", html.Span("soon", className="nav-soon")],
@@ -72,6 +73,7 @@ app.layout = html.Div(
 @app.callback(
     Output("nav-home", "className"),
     Output("nav-companies", "className"),
+    Output("nav-screen", "className"),
     Input("url", "pathname"),
 )
 def mark_active(pathname: str):
@@ -80,7 +82,11 @@ def mark_active(pathname: str):
 
     # /company/<orgnr> is a drill-down from the companies page, so it keeps
     # that section highlighted.
-    return cls(pathname == "/"), cls(bool(pathname) and pathname.startswith("/compan"))
+    return (
+        cls(pathname == "/"),
+        cls(bool(pathname) and pathname.startswith("/compan")),
+        cls(pathname == "/screen"),
+    )
 
 
 def main() -> None:

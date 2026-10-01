@@ -317,6 +317,33 @@ body {
   background: var(--orange-deep);
 }
 
+.btn {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 10px 22px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.btn:hover {
+  background: var(--orange);
+  border-color: var(--orange);
+}
+
+.screen-selection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 20px;
+}
+
 .hero-stats {
   display: flex;
   gap: 40px;
