@@ -22,16 +22,19 @@ def search(request: SearchRequest, client: Elasticsearch | None = None) -> Searc
         # and "first N browsable" note depend on it at full-register scale.
         track_total_hits=True,
     )
+    def _bucket(b: dict) -> FacetBucket:
+        key = str(b.get("key_as_string", b["key"]))
+        text_buckets = b.get("top_text", {}).get("buckets", [])
+        label = text_buckets[0]["key"] if text_buckets else None
+        return FacetBucket(key=key, count=b["doc_count"], label=label)
+
     return SearchResult(
         total=resp["hits"]["total"]["value"],
         companies=[Company.model_validate(h["_source"]) for h in resp["hits"]["hits"]],
         facets={
             # date_histogram buckets key on epoch millis but carry a formatted
             # key_as_string ("1972"); prefer it so the histogram reads cleanly.
-            name: [
-                FacetBucket(key=str(b.get("key_as_string", b["key"])), count=b["doc_count"])
-                for b in agg["buckets"]
-            ]
+            name: [_bucket(b) for b in agg["buckets"]]
             for name, agg in resp["aggregations"].items()
         },
     )
