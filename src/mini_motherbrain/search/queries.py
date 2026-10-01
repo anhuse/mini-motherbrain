@@ -4,7 +4,10 @@ from mini_motherbrain.search.models import SearchRequest
 # with the current query. `industries` keys on the code (the dropdown's filter
 # value); `industries_text` carries human-readable labels for the chart.
 AGGREGATIONS = {
-    "industries": {"terms": {"field": "industry_code", "size": 20}},
+    "industries": {
+        "terms": {"field": "industry_code", "size": 20},
+        "aggs": {"top_text": {"terms": {"field": "industry_text.raw", "size": 1}}},
+    },
     "industries_text": {"terms": {"field": "industry_text.raw", "size": 10}},
     "municipalities": {"terms": {"field": "municipality", "size": 20}},
     "org_forms": {"terms": {"field": "org_form", "size": 10}},

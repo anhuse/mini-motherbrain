@@ -56,6 +56,7 @@ class SearchRequest(BaseModel):
 class FacetBucket(BaseModel):
     key: str
     count: int
+    label: str | None = None
 
 
 class SearchResult(BaseModel):

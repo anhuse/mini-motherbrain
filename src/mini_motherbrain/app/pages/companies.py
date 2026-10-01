@@ -229,6 +229,6 @@ def update(
         page_count,
         page_current,
         summary,
-        [{"label": f"{b.key} ({b.count:,})", "value": b.key} for b in result.facets["industries"]],
+        [{"label": f"{b.label or b.key} ({b.count:,})", "value": b.key} for b in result.facets["industries"]],
         options("municipalities"),
     )
